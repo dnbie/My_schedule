@@ -1,3 +1,4 @@
+// Hustle Hub v1.1 - Full featured production build
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import YearOverview from './components/YearOverview';
 import ScheduleTable from './components/ScheduleTable';
