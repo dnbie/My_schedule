@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Schedule Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: #888;
+            margin-top: 10px;
+        }
+
+        /* Year Overview */
+        .year-overview {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1200px) {
+            .year-overview {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .year-overview {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .month-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .month-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-5px);
+        }
+
+        .month-card.active {
+            border-color: #00d9ff;
+            background: rgba(0, 217, 255, 0.1);
+        }
+
+        .month-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .month-progress {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .month-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .month-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+        }
+
+        @media (max-width: 1100px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Schedule Table */
+        .schedule-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 25px;
+            overflow-x: auto;
+        }
+
+        .schedule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .schedule-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .add-activity-btn {
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            color: #1a1a2e;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .add-activity-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0, 217, 255, 0.3);
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 2px;
+        }
+
+        .schedule-table th {
+            background: rgba(0, 217, 255, 0.2);
+            padding: 12px 8px;
+            font-size: 0.75rem;
+            border-radius: 5px;
+            min-width: 35px;
+        }
+
+        .schedule-table th:first-child {
+            min-width: 150px;
+            text-align: left;
+            padding-left: 15px;
+        }
+
+        .schedule-table td {
+            text-align: center;
+            padding: 8px 4px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 5px;
+        }
+
+        .schedule-table td:first-child {
+            text-align: left;
+            padding-left: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .schedule-table td:first-child:hover {
+            background: rgba(0, 217, 255, 0.1);
+        }
+
+        .activity-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .activity-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .cell-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.7rem;
+        }
+
+        .cell-btn.yes {
+            background: linear-gradient(135deg, #00ff88, #00cc6a);
+            color: #1a1a2e;
+        }
+
+        .cell-btn.no {
+            background: rgba(255, 255, 255, 0.1);
+            color: #666;
+        }
+
+        .cell-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .activity-progress {
+            width: 60px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-left: auto;
+        }
+
+        .activity-progress-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .chart-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 25px;
+        }
+
+        .chart-section h3 {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+        }
+
+        .overall-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-box .value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-box .label {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #1a1a2e;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal h2 {
+            margin-bottom: 25px;
+            padding-right: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #888;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #00d9ff;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .color-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .color-option {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .color-option:hover,
+        .color-option.selected {
+            transform: scale(1.1);
+            border-color: #fff;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            color: #1a1a2e;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 20px rgba(0, 217, 255, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(90deg, #ff4757, #ff6b81);
+            margin-top: 10px;
+        }
+
+        /* Activity Detail Modal */
+        .activity-detail-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .activity-detail-color {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+        }
+
+        .activity-detail-info h2 {
+            margin-bottom: 5px;
+        }
+
+        .activity-detail-info p {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .detail-section {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .detail-section h4 {
+            margin-bottom: 15px;
+            color: #00d9ff;
+        }
+
+        .detail-section p {
+            color: #ccc;
+            line-height: 1.6;
+        }
+
+        .progress-ring {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .progress-ring-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+        }
+
+        .progress-ring-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 10;
+        }
+
+        .progress-ring-fill {
+            fill: none;
+            stroke: url(#gradient);
+            stroke-width: 10;
+            stroke-linecap: round;
+            transform: rotate(-90deg);
+            transform-origin: center;
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        .progress-ring-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .progress-ring-text .percentage {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .progress-ring-text .label {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .weekly-breakdown {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-top: 15px;
+        }
+
+        .week-day {
+            text-align: center;
+            padding: 10px 5px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .week-day .day-name {
+            font-size: 0.7rem;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .week-day .day-status {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin: 0 auto;
+        }
+
+        .week-day .day-status.completed {
+            background: linear-gradient(135deg, #00ff88, #00cc6a);
+        }
+
+        .week-day .day-status.missed {
+            background: rgba(255, 71, 87, 0.5);
+        }
+
+        .week-day .day-status.pending {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📅 My Schedule Tracker</h1>
+            <p>Track your daily activities and achieve your goals</p>
+        </header>
+
+        <!-- Year Overview -->
+        <section class="year-overview" id="yearOverview"></section>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Schedule Table -->
+            <section class="schedule-section">
+                <div class="schedule-header">
+                    <h2 id="currentMonthTitle">January 2026</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="add-activity-btn" style="background: rgba(255,71,87,0.8);" onclick="resetToDefault()">🔄 Reset Schedule</button>
+                        <button class="add-activity-btn" onclick="openAddActivityModal()">+ Add Activity</button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="schedule-table" id="scheduleTable">
+                        <thead id="tableHeader"></thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="chart-section">
+                    <h3>📊 Monthly Progress</h3>
+                    <div class="chart-container">
+                        <canvas id="progressChart"></canvas>
+                    </div>
+                    <div class="overall-stats">
+                        <div class="stat-box">
+                            <div class="value" id="completedDays">0</div>
+                            <div class="label">Days Completed</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="value" id="overallProgress">0%</div>
+                            <div class="label">Overall Progress</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-section">
+                    <h3>📈 Activity Breakdown</h3>
+                    <div class="chart-container">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Add/Edit Activity Modal -->
+    <div class="modal-overlay" id="activityModal">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('activityModal')">&times;</button>
+            <h2 id="modalTitle">Add New Activity</h2>
+            <form id="activityForm">
+                <input type="hidden" id="editActivityId">
+                <div class="form-group">
+                    <label>Activity Name</label>
+                    <input type="text" id="activityName" placeholder="e.g., Morning Exercise" required>
+                </div>
+                <div class="form-group">
+                    <label>Goal</label>
+                    <textarea id="activityGoal" placeholder="What do you want to achieve?"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Plan</label>
+                    <textarea id="activityPlan" placeholder="How will you achieve it?"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Color</label>
+                    <div class="color-options" id="colorOptions"></div>
+                </div>
+                <button type="submit" class="btn-primary">Save Activity</button>
+                <button type="button" class="btn-primary btn-danger" id="deleteActivityBtn" style="display: none;" onclick="deleteActivity()">Delete Activity</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Activity Detail Modal -->
+    <div class="modal-overlay" id="activityDetailModal">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('activityDetailModal')">&times;</button>
+            <div class="activity-detail-header">
+                <div class="activity-detail-color" id="detailColor"></div>
+                <div class="activity-detail-info">
+                    <h2 id="detailName"></h2>
+                    <p id="detailStats"></p>
+                </div>
+            </div>
+
+            <div class="progress-ring">
+                <div class="progress-ring-container">
+                    <svg width="150" height="150">
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#00d9ff"/>
+                                <stop offset="100%" stop-color="#00ff88"/>
+                            </linearGradient>
+                        </defs>
+                        <circle class="progress-ring-bg" cx="75" cy="75" r="60"/>
+                        <circle class="progress-ring-fill" id="progressRing" cx="75" cy="75" r="60" stroke-dasharray="377" stroke-dashoffset="377"/>
+                    </svg>
+                    <div class="progress-ring-text">
+                        <div class="percentage" id="ringPercentage">0%</div>
+                        <div class="label">Complete</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h4>🎯 Goal</h4>
+                <p id="detailGoal">No goal set</p>
+            </div>
+
+            <div class="detail-section">
+                <h4>📋 Plan</h4>
+                <p id="detailPlan">No plan set</p>
+            </div>
+
+            <div class="detail-section">
+                <h4>📅 This Week</h4>
+                <div class="weekly-breakdown" id="weeklyBreakdown"></div>
+            </div>
+
+            <button class="btn-primary" onclick="editActivityFromDetail()">✏️ Edit Activity</button>
+        </div>
+    </div>
+
+    <script src="home.js"></script>
+</body>
+</html>
