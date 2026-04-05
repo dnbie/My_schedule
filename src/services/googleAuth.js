@@ -41,7 +41,10 @@ const loadGapiClient = () => {
                 gapiLoaded = true;
                 resolve();
             } catch (err) {
-                reject(err);
+                console.warn('GAPI client init failed (Drive API may not be enabled yet):', err);
+                // Still resolve — auth can work without Drive
+                gapiLoaded = false;
+                resolve();
             }
         });
     });
@@ -51,24 +54,37 @@ const loadGapiClient = () => {
 
 const doInit = async () => {
     // Load both scripts in parallel
-    await Promise.all([
-        loadScript('https://apis.google.com/js/api.js', 'gapi-script'),
-        loadScript('https://accounts.google.com/gsi/client', 'gis-script'),
-    ]);
+    try {
+        await Promise.all([
+            loadScript('https://apis.google.com/js/api.js', 'gapi-script'),
+            loadScript('https://accounts.google.com/gsi/client', 'gis-script'),
+        ]);
+    } catch (err) {
+        console.error('Failed to load Google scripts:', err);
+        throw new Error('Failed to load Google scripts. Check your internet connection.');
+    }
 
-    // Init gapi client (for Drive API calls)
-    await loadGapiClient();
+    // Init gapi client (for Drive API calls) — non-blocking
+    if (window.gapi) {
+        await loadGapiClient();
+    }
 
     // Check for existing session
     const savedToken = sessionStorage.getItem('gapi_access_token');
     const savedProfile = sessionStorage.getItem('gapi_user_profile');
     if (savedToken && savedProfile) {
         accessToken = savedToken;
-        window.gapi.client.setToken({ access_token: accessToken });
+        if (window.gapi && window.gapi.client) {
+            window.gapi.client.setToken({ access_token: accessToken });
+        }
         currentUserProfile = JSON.parse(savedProfile);
     }
 
-    gisLoaded = true;
+    gisLoaded = !!(window.google && window.google.accounts);
+    
+    if (!gisLoaded) {
+        throw new Error('Google Identity Services did not load. Ad-blockers may be blocking it.');
+    }
 };
 
 export const initGoogleAPI = async () => {

@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }) => {
                 }
             } catch (err) {
                 console.error('Failed to initialize Google API:', err);
-                setError('Failed to connect to Google. You can continue as guest.');
+                setError(err?.message || 'Failed to connect to Google. You can continue as guest.');
                 setIsInitialized(true);
             } finally {
                 setLoading(false);
